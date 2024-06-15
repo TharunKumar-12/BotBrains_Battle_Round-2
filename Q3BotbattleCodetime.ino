@@ -1,0 +1,73 @@
+#include <Servo.h>
+#include <LowPower.h>  // Include LowPower library
+
+const int soilMoisturePin = A0;
+const int potPin = A1;
+const int pumpPin = 9;
+const int buzzerPin = 8;
+const int ledPin = 7;
+const int buttonPin = 2;
+
+Servo servoMotor;
+int threshold = 300;  // Default threshold
+
+void setup() {
+  pinMode(soilMoisturePin, INPUT);
+  pinMode(potPin, INPUT);
+  pinMode(pumpPin, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);  // Pull-up resistor for button
+  servoMotor.attach(10);
+}
+
+void loop() {
+  // Read soil moisture and potentiometer values
+  int soilMoisture = analogRead(soilMoisturePin);
+  int potValue = analogRead(potPin);
+  
+  // Adjust threshold based on potentiometer value (map potValue from 0-1023 to 0-1000)
+  threshold = map(potValue, 0, 1023, 0, 1000);
+  
+  if (soilMoisture < threshold) {
+    // Watering action
+    digitalWrite(pumpPin, HIGH);
+    servoMotor.write(90);
+    digitalWrite(buzzerPin, HIGH);
+    digitalWrite(ledPin, HIGH);
+    delay(500);    // Feedback duration
+    digitalWrite(buzzerPin, LOW);
+    digitalWrite(ledPin, LOW);
+    delay(4500);   // Watering duration
+    digitalWrite(pumpPin, LOW);
+    servoMotor.write(0);
+    digitalWrite(buzzerPin, HIGH);
+    digitalWrite(ledPin, HIGH);
+    delay(500);    // Feedback duration
+    digitalWrite(buzzerPin, LOW);
+    digitalWrite(ledPin, LOW);
+  }
+  
+  // Check if the system should enter sleep mode
+  if (digitalRead(buttonPin) == LOW) { // Button pressed (active low)
+    enterSleepMode();
+  }
+  
+  delay(1000); // Check soil moisture every second
+}
+
+void enterSleepMode() {
+  // Turn off all outputs
+  digitalWrite(pumpPin, LOW);
+  servoMotor.detach(); // Detach servo to save power
+  digitalWrite(buzzerPin, LOW);
+  digitalWrite(ledPin, LOW);
+  
+  // Enter sleep mode (Low Power Mode)
+  sleepNow();
+}
+
+void sleepNow() {
+  // Enter power-down sleep mode for 8 seconds
+  LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+}
